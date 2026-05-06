@@ -100,35 +100,51 @@ try {
     $ProgressPreference = 'SilentlyContinue'
     $ErrorActionPreference = 'Stop'
     
-    Write-Host "正在安装 VCLibs..." -ForegroundColor Cyan
-    $vcLibsUrl = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
-    $vcLibsPath = Join-Path $env:TEMP "VCLibs.appx"
-    Invoke-WebRequest -Uri $vcLibsUrl -OutFile $vcLibsPath
-    Add-AppxPackage -Path $vcLibsPath
-    Write-Host "✓ VCLibs 安装完成" -ForegroundColor Green
+    # 检查并安装 VCLibs
+    Write-Host "正在检查 VCLibs..." -ForegroundColor Cyan
+    $vcLibsInstalled = Get-AppxPackage -Name "Microsoft.VCLibs.140.00.UWPDesktop" -ErrorAction SilentlyContinue
+    if ($vcLibsInstalled) {
+        Write-Host "✓ VCLibs 已安装 (版本: $($vcLibsInstalled.Version))" -ForegroundColor Green
+    } else {
+        Write-Host "正在安装 VCLibs..." -ForegroundColor Yellow
+        $vcLibsUrl = "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx"
+        $vcLibsPath = Join-Path $env:TEMP "VCLibs.appx"
+        Invoke-WebRequest -Uri $vcLibsUrl -OutFile $vcLibsPath
+        Add-AppxPackage -Path $vcLibsPath
+        Remove-Item $vcLibsPath -ErrorAction SilentlyContinue
+        Write-Host "✓ VCLibs 安装完成" -ForegroundColor Green
+    }
     
+    # 安装 Windows App Runtime
     Write-Host "正在安装 Windows App Runtime..." -ForegroundColor Cyan
     $runtimeUrl = "https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe"
     $runtimePath = Join-Path $env:TEMP "WindowsAppRuntime.exe"
     Invoke-WebRequest -Uri $runtimeUrl -OutFile $runtimePath
     Start-Process -FilePath $runtimePath -ArgumentList "--quiet" -Wait
+    Remove-Item $runtimePath -ErrorAction SilentlyContinue
     Write-Host "✓ Windows App Runtime 安装完成" -ForegroundColor Green
     
-    Write-Host "正在安装 Winget..." -ForegroundColor Cyan
-    $wingetUrl = "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
-    $wingetPath = Join-Path $env:TEMP "Winget.msixbundle"
-    Invoke-WebRequest -Uri $wingetUrl -OutFile $wingetPath
-    Add-AppxPackage -Path $wingetPath
-    Write-Host "✓ Winget 安装完成" -ForegroundColor Green
+    # 检查并安装 Winget
+    Write-Host "正在检查 Winget..." -ForegroundColor Cyan
+    $wingetInstalled = Get-AppxPackage -Name "Microsoft.DesktopAppInstaller" -ErrorAction SilentlyContinue
+    if ($wingetInstalled) {
+        Write-Host "✓ Winget 已安装 (版本: $($wingetInstalled.Version))" -ForegroundColor Green
+    } else {
+        Write-Host "正在安装 Winget..." -ForegroundColor Yellow
+        $wingetUrl = "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+        $wingetPath = Join-Path $env:TEMP "Winget.msixbundle"
+        Invoke-WebRequest -Uri $wingetUrl -OutFile $wingetPath
+        Add-AppxPackage -Path $wingetPath
+        Remove-Item $wingetPath -ErrorAction SilentlyContinue
+        Write-Host "✓ Winget 安装完成" -ForegroundColor Green
+    }
     
-    # 清理临时文件
-    Remove-Item $vcLibsPath, $runtimePath, $wingetPath -ErrorAction SilentlyContinue
-    
-    Write-Host "`n安装成功！请关闭并重新打开 PowerShell 以使用 winget 命令。" -ForegroundColor Yellow
+    Write-Host "`n✓ 安装成功！请关闭并重新打开 PowerShell 以使用 winget 命令。" -ForegroundColor Yellow
     
 } catch {
     Write-Host "❌ 安装失败: $_" -ForegroundColor Red
     Write-Host "请检查网络连接并重试。" -ForegroundColor Yellow
+    Write-Host "`n如果错误提示已安装更高版本，可以忽略并继续下一步。" -ForegroundColor Cyan
 }
 ```
 
