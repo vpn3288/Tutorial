@@ -345,19 +345,27 @@ hermes init
 ### WinRM 配置（Windows 远程管理）
 
 ```powershell
-# 启用 WinRM 服务
+# 1. 将网络改为专用
+Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private
+
+# 2. 启用 WinRM
 Enable-PSRemoting -Force
 
-# 配置 WinRM 监听器
+# 3. 配置 WinRM
 winrm quickconfig -quiet
 
-# 设置 WinRM 服务为自动启动
+# 4. 设置自动启动
 Set-Service WinRM -StartupType Automatic
 
-# 配置防火墙规则
-New-NetFirewallRule -Name "WinRM-HTTP" -DisplayName "Windows Remote Management (HTTP-In)" -Enabled True -Direction Inbound -Protocol TCP -LocalPort 5985
+# 5. 启动服务
+Start-Service WinRM
 
-Write-Host "✓ WinRM 配置完成" -ForegroundColor Green
+# 6. 验证配置
+Test-WSMan
+
+# 7. 查看监听器
+winrm enumerate winrm/config/listener
+
 ```
 
 ### SSH Server 配置
