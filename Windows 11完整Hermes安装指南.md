@@ -216,7 +216,7 @@ pip --version
 
 ---
 
-## 步骤 5: 安装 Node.js 22+ LTS
+## 步骤 5: 安装 Node.js 24+ LTS
 
 Node.js 提供 JavaScript 运行时环境。
 
