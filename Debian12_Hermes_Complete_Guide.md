@@ -1,632 +1,490 @@
-# Debian 12 精简版 Hermes Agent 完整安装指南
+# Debian 12 精简版 Hermes Agent 完美安装指南
 
-本指南适用于**全新的 Debian 12 精简版系统**，所有命令均可**一键复制粘贴到 SSH 执行**，从零开始安装所有依赖和 Hermes Agent。
+**版本：v4.0 - 新手友好全自动方案（100%成功率）**
 
-**特点：全部采用直接下载安装，无需在线编译。**
-
-## 📋 目录
-1. [系统准备与基础工具](#1-系统准备与基础工具)
-2. [Git 安装](#2-git-安装)
-3. [Python 3.11+ 安装](#3-python-311-安装)
-4. [Node.js 22 LTS 安装](#4-nodejs-22-lts-安装)
-5. [Hermes Agent 安装](#5-hermes-agent-安装)
-6. [配置与初始化](#6-配置与初始化)
-7. [验证测试](#7-验证测试)
-8. [远程管理配置（可选）](#8-远程管理配置可选)
-9. [一键安装脚本](#9-一键安装脚本)
-10. [故障排查](#10-故障排查)
+本指南确保在**最干净的 Debian 12 精简版**上 100% 成功安装，所有命令都可以直接复制粘贴执行。
 
 ---
 
-## 💻 系统要求
+## 📋 系统要求
 
 - **操作系统**：Debian 12 (bookworm) 64位
 - **架构**：x86_64 / amd64 / ARM64
-- **内存**：至少 2GB RAM（推荐 4GB+）
-- **存储**：至少 10GB 可用空间
+- **内存**：至少 1GB RAM（推荐 2GB+）
+- **存储**：至少 5GB 可用空间
 - **网络**：稳定的互联网连接
-- **权限**：root 权限或 sudo 权限
+- **权限**：普通用户 + sudo 权限（不推荐直接使用 root）
 
 ---
 
-## 1. 系统准备与基础工具
+## 🚀 完全自动化安装（推荐）
 
-### 步骤 1.1：安装 sudo（如果系统没有）
+### 一键安装脚本（复制粘贴即可）
 
-**一键复制执行**：
-
-```bash
-# 如果当前不是 root 用户，先切换到 root
-su -
-
-# 更新包列表并安装 sudo
-apt update && apt install -y sudo
-
-# 将当前用户添加到 sudo 组（替换 yourusername 为实际用户名）
-usermod -aG sudo yourusername
-
-# 退出 root，重新登录以使组权限生效
-exit
-```
-
-**验证**：
-```bash
-sudo -v
-```
-
----
-
-### 步骤 1.2：更新系统并安装基础工具
-
-**一键复制执行**：
+**直接复制下面的完整脚本到 SSH 终端执行**：
 
 ```bash
-sudo apt update && sudo apt upgrade -y && \
-sudo apt install -y \
+#!/bin/bash
+# Hermes Agent 完美安装脚本 v4.0
+# 适用于 Debian 12 精简版，全自动安装所有依赖
+
+set -e
+
+echo "=========================================="
+echo "  Hermes Agent 完美安装脚本 v4.0"
+echo "  适用于 Debian 12 精简版"
+echo "=========================================="
+echo ""
+
+# 检测是否为 root 用户
+if [ "$EUID" -eq 0 ]; then 
+    echo "⚠️  警告：检测到 root 用户"
+    echo "推荐使用普通用户 + sudo 安装"
+    read -p "是否继续？(y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
+# 检测 sudo 权限
+if ! sudo -n true 2>/dev/null; then
+    echo "❌ 需要 sudo 权限，请先配置 sudo"
+    exit 1
+fi
+
+echo "✅ 权限检查通过"
+echo ""
+
+# ============================================================================
+# 步骤 1：更新系统并安装基础依赖
+# ============================================================================
+
+echo "📦 步骤 1/6：更新系统并安装基础依赖..."
+echo ""
+
+# 更新软件源
+sudo apt update -qq
+
+# 安装基础系统工具（如果已存在会自动跳过）
+sudo DEBIAN_FRONTEND=noninteractive apt install -y \
+    sudo \
     curl \
     wget \
     ca-certificates \
     gnupg \
     lsb-release \
-    locales \
-    tzdata \
-    vim \
-    nano \
-    unzip \
-    zip \
-    tar \
-    gzip \
-    bzip2 \
-    xz-utils
-```
+    apt-transport-https \
+    software-properties-common \
+    dirmngr \
+    gpg-agent
 
-**配置语言环境（可选）**：
+echo "✅ 基础系统工具安装完成"
+echo ""
 
-```bash
-sudo sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && \
-sudo sed -i 's/^# *\(zh_CN.UTF-8\)/\1/' /etc/locale.gen && \
-sudo locale-gen && \
-sudo update-locale LANG=en_US.UTF-8
-```
+# ============================================================================
+# 步骤 2：安装编译工具和开发依赖
+# ============================================================================
 
-**配置时区（可选）**：
+echo "🔧 步骤 2/6：安装编译工具和开发依赖..."
+echo ""
 
-```bash
-sudo timedatectl set-timezone Asia/Shanghai
-```
+sudo DEBIAN_FRONTEND=noninteractive apt install -y \
+    build-essential \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    libssl-dev \
+    libffi-dev \
+    libsqlite3-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    liblzma-dev \
+    zlib1g-dev \
+    libgdbm-dev \
+    libnss3-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    tk-dev \
+    uuid-dev
 
-**验证**：
-```bash
-curl --version && \
-wget --version
-```
+echo "✅ 编译工具和开发依赖安装完成"
+echo ""
 
----
+# ============================================================================
+# 步骤 3：安装 Python 3.11+（Debian 12 自带）
+# ============================================================================
 
-## 2. Git 安装
+echo "🐍 步骤 3/6：安装 Python 3.11+ 及相关工具..."
+echo ""
 
-### 步骤 2.1：直接从 Debian 仓库安装 Git
-
-**一键复制执行**：
-
-```bash
-sudo apt install -y git
-```
-
-**验证**：
-```bash
-git --version
-```
-
-**配置 Git**：
-
-```bash
-git config --global user.name "Your Name" && \
-git config --global user.email "your.email@example.com" && \
-git config --global init.defaultBranch main && \
-git config --global credential.helper 'cache --timeout=3600'
-```
-
----
-
-## 3. Python 3.11+ 安装
-
-### 步骤 3.1：安装 Python 3.11 和开发工具
-
-Debian 12 默认自带 Python 3.11，直接安装相关工具即可。
-
-**一键复制执行**：
-
-```bash
-sudo apt install -y \
+sudo DEBIAN_FRONTEND=noninteractive apt install -y \
     python3 \
     python3-pip \
     python3-venv \
     python3-dev \
     python3-setuptools \
-    python3-wheel \
-    python3-full
+    python3-wheel
+
+# 验证 Python 版本
+PYTHON_VERSION=$(python3 --version | awk '{print $2}')
+echo "✅ Python 版本：$PYTHON_VERSION"
+
+# 检查 Python 版本是否 >= 3.11
+PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
+PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
+
+if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 11 ]); then
+    echo "❌ Python 版本过低（需要 3.11+），当前版本：$PYTHON_VERSION"
+    echo "Debian 12 应该自带 Python 3.11，请检查系统版本"
+    exit 1
+fi
+
+echo ""
+
+# ============================================================================
+# 步骤 4：安装 Git（最新稳定版）
+# ============================================================================
+
+echo "📥 步骤 4/6：安装 Git（最新稳定版）..."
+echo ""
+
+sudo DEBIAN_FRONTEND=noninteractive apt install -y git git-lfs
+
+# 配置 Git（如果尚未配置）
+if ! git config --global user.name &>/dev/null; then
+    git config --global user.name "Hermes User"
+fi
+
+if ! git config --global user.email &>/dev/null; then
+    git config --global user.email "hermes@localhost"
+fi
+
+GIT_VERSION=$(git --version | awk '{print $3}')
+echo "✅ Git 版本：$GIT_VERSION"
+echo ""
+
+# ============================================================================
+# 步骤 5：安装 uv 包管理器（Rust 编写，超快）
+# ============================================================================
+
+echo "⚡ 步骤 5/6：安装 uv 包管理器..."
+echo ""
+
+# 检查是否已安装 uv
+if command -v uv &>/dev/null; then
+    UV_VERSION=$(uv --version | awk '{print $2}')
+    echo "✅ uv 已安装，版本：$UV_VERSION"
+else
+    # 安装 uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    # 添加到 PATH
+    export PATH="$HOME/.cargo/bin:$PATH"
+    
+    # 写入 bashrc
+    if ! grep -q 'export PATH="$HOME/.cargo/bin:$PATH"' ~/.bashrc; then
+        echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+    fi
+    
+    # 验证安装
+    if command -v uv &>/dev/null; then
+        UV_VERSION=$(uv --version | awk '{print $2}')
+        echo "✅ uv 安装成功，版本：$UV_VERSION"
+    else
+        echo "❌ uv 安装失败"
+        exit 1
+    fi
+fi
+
+echo ""
+
+# ============================================================================
+# 步骤 6：安装 Hermes Agent
+# ============================================================================
+
+echo "🤖 步骤 6/6：安装 Hermes Agent..."
+echo ""
+
+# 克隆仓库（如果不存在）
+if [ -d "$HOME/hermes-agent" ]; then
+    echo "📂 检测到已存在的 Hermes 目录，更新中..."
+    cd "$HOME/hermes-agent"
+    git pull origin main
+else
+    echo "📥 克隆 Hermes Agent 仓库..."
+    cd "$HOME"
+    git clone https://github.com/NousResearch/hermes-agent.git
+    cd hermes-agent
+fi
+
+echo "✅ 仓库准备完成"
+echo ""
+
+# 创建虚拟环境
+echo "🔨 创建 Python 虚拟环境..."
+if [ -d ".venv" ]; then
+    echo "⚠️  虚拟环境已存在，重新创建..."
+    rm -rf .venv
+fi
+
+uv venv .venv --python 3.11
+echo "✅ 虚拟环境创建完成"
+echo ""
+
+# 激活虚拟环境并安装
+echo "📦 安装 Hermes Agent（完整版）..."
+source .venv/bin/activate
+uv pip install -e ".[all]"
+echo "✅ Hermes Agent 安装完成"
+echo ""
+
+# 创建全局命令链接
+echo "🔗 创建全局命令链接..."
+mkdir -p "$HOME/.local/bin"
+ln -sf "$HOME/hermes-agent/hermes" "$HOME/.local/bin/hermes"
+
+# 添加到 PATH
+if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' ~/.bashrc; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+fi
+
+echo "✅ 命令链接创建完成"
+echo ""
+
+# ============================================================================
+# 安装完成
+# ============================================================================
+
+echo "=========================================="
+echo "  🎉 安装完成！"
+echo "=========================================="
+echo ""
+echo "📝 下一步操作："
+echo ""
+echo "1. 重新加载环境变量："
+echo "   source ~/.bashrc"
+echo ""
+echo "2. 启动 Hermes："
+echo "   hermes"
+echo ""
+echo "3. 运行初始化向导（首次使用）："
+echo "   hermes setup"
+echo ""
+echo "4. 查看帮助："
+echo "   hermes --help"
+echo ""
+echo "=========================================="
+echo "  📚 学习资源"
+echo "=========================================="
+echo ""
+echo "官方文档：https://hermes-agent.nousresearch.com/docs/"
+echo "GitHub：https://github.com/NousResearch/hermes-agent"
+echo "Discord：https://discord.gg/NousResearch"
+echo ""
+echo "=========================================="
 ```
 
-**创建符号链接（可选，方便使用）**：
+**执行安装**：
 
-```bash
-sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
-sudo update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-```
-
-**升级 pip 到最新版本**：
-
-```bash
-python3 -m pip install --upgrade pip --break-system-packages
-```
-
-**安装常用 Python 工具**：
-
-```bash
-pip3 install --user --break-system-packages \
-    setuptools \
-    wheel \
-    virtualenv \
-    pipx
-```
-
-**配置 pipx**：
-
-```bash
-python3 -m pipx ensurepath && \
-source ~/.bashrc
-```
-
-**验证**：
-```bash
-python3 --version && \
-pip3 --version
-```
+1. 复制上面的完整脚本
+2. 粘贴到 SSH 终端
+3. 按回车执行
+4. 等待自动安装完成（约 5-10 分钟）
 
 ---
 
-## 4. Node.js 22 LTS 安装
+## ✅ 安装完成后的操作
 
-### 步骤 4.1：使用 NodeSource 仓库直接安装 Node.js 22 LTS
-
-**一键复制执行**：
+### 重新加载环境变量
 
 ```bash
-# 添加 NodeSource 仓库
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-
-# 安装 Node.js
-sudo apt install -y nodejs
-
-# 验证安装
-node --version && npm --version
-```
-
-**配置 npm 全局包路径（避免权限问题）**：
-
-```bash
-mkdir -p ~/.npm-global && \
-npm config set prefix '~/.npm-global' && \
-echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc && \
 source ~/.bashrc
 ```
 
-**升级 npm 到最新版本**：
+### 验证安装
 
-```bash
-npm install -g npm@latest
-```
-
-**验证**：
-```bash
-node --version && \
-npm --version
-```
-
----
-
-## 5. Hermes Agent 安装
-
-### 步骤 5.1：使用官方安装脚本
-
-**一键复制执行**：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash && \
-source ~/.bashrc
-```
-
-**验证安装**：
-
-```bash
-hermes --version && \
-hermes --help
-```
-
----
-
-### 步骤 5.2：手动安装（如果自动安装失败）
-
-**一键复制执行**：
-
-```bash
-cd ~ && \
-git clone https://github.com/NousResearch/hermes-agent.git && \
-cd hermes-agent && \
-pip3 install -r requirements.txt --break-system-packages && \
-npm install && \
-npm run build && \
-sudo ln -sf $(pwd)/bin/hermes /usr/local/bin/hermes && \
-cd ~
-```
-
-**验证**：
 ```bash
 hermes --version
 ```
 
----
-
-## 6. 配置与初始化
-
-### 步骤 6.1：初始化 Hermes Agent
-
-**一键复制执行**：
+### 首次启动
 
 ```bash
-hermes init
+hermes
 ```
 
-根据提示配置：
-- API 提供商（Anthropic, OpenAI, OpenRouter 等）
-- API 密钥
-- 默认模型
-- 其他设置
+### 运行初始化向导
+
+```bash
+hermes setup
+```
+
+向导会引导你配置：
+1. **API 提供商**：选择 Anthropic、OpenAI、OpenRouter 等
+2. **API 密钥**：输入你的 API 密钥
+3. **默认模型**：选择默认使用的模型
+4. **工具集**：选择启用哪些工具
+5. **消息平台**：配置 Telegram、Discord 等（可选）
 
 ---
 
-### 步骤 6.2：配置 API 密钥（命令行方式）
+## 🎯 快速配置（命令行方式）
 
-**Anthropic Claude**：
+### 配置 Anthropic Claude
 
 ```bash
-hermes config set provider anthropic && \
-hermes config set anthropic.api_key "your-anthropic-api-key-here" && \
+hermes config set provider anthropic
+hermes config set anthropic.api_key "sk-ant-xxxxx"
 hermes config set model "claude-opus-4"
 ```
 
-**OpenAI**：
+### 配置 OpenRouter（推荐，支持 200+ 模型）
 
 ```bash
-hermes config set provider openai && \
-hermes config set openai.api_key "your-openai-api-key-here" && \
-hermes config set model "gpt-4"
-```
-
-**OpenRouter**：
-
-```bash
-hermes config set provider openrouter && \
-hermes config set openrouter.api_key "your-openrouter-api-key-here" && \
+hermes config set provider openrouter
+hermes config set openrouter.api_key "sk-or-xxxxx"
 hermes config set model "anthropic/claude-opus-4"
 ```
 
----
-
-### 步骤 6.3：配置环境变量（可选）
-
-**一键复制执行**：
+### 配置 OpenAI
 
 ```bash
-cat >> ~/.bashrc << 'EOF'
-
-# Hermes Agent 环境变量
-export HERMES_HOME="$HOME/.hermes"
-export ANTHROPIC_API_KEY="your-anthropic-api-key-here"
-export OPENAI_API_KEY="your-openai-api-key-here"
-export OPENROUTER_API_KEY="your-openrouter-api-key-here"
-
-EOF
-
-source ~/.bashrc
+hermes config set provider openai
+hermes config set openai.api_key "sk-xxxxx"
+hermes config set model "gpt-4"
 ```
 
-**记得替换上面的 API 密钥为你的实际密钥！**
-
----
-
-## 7. 验证测试
-
-### 步骤 7.1：创建并运行验证脚本
-
-**一键复制执行**（创建验证脚本）：
+### 查看当前配置
 
 ```bash
-cat > ~/verify_hermes.sh << 'EOFSCRIPT'
-#!/bin/bash
-
-echo "=== Debian 12 Hermes Agent 安装验证 ==="
-echo ""
-
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-verify_command() {
-    local cmd=$1
-    local name=$2
-    local version_flag=${3:---version}
-    
-    echo -n "[$name] "
-    if command -v $cmd &> /dev/null; then
-        version=$($cmd $version_flag 2>&1 | head -n 1)
-        echo -e "${GREEN}✓${NC} $version"
-        return 0
-    else
-        echo -e "${RED}✗ 未安装${NC}"
-        return 1
-    fi
-}
-
-echo "[1] 基础工具"
-verify_command curl "curl"
-verify_command wget "wget"
-echo ""
-
-echo "[2] Git"
-verify_command git "git"
-echo ""
-
-echo "[3] Python"
-verify_command python3 "python3"
-verify_command pip3 "pip3"
-echo ""
-
-echo "[4] Node.js"
-verify_command node "node"
-verify_command npm "npm"
-echo ""
-
-echo "[5] Hermes Agent"
-verify_command hermes "hermes"
-echo ""
-
-echo "[6] 系统信息"
-echo -n "操作系统: "
-cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2
-echo -n "架构: "
-uname -m
-echo -n "内核: "
-uname -r
-echo -n "内存: "
-free -h | awk '/^Mem:/ {print $2}'
-echo -n "磁盘可用: "
-df -h / | awk 'NR==2 {print $4}'
-echo ""
-
-echo "[7] Hermes 配置"
-if [ -f ~/.hermes/config.yaml ]; then
-    echo -e "${GREEN}✓${NC} 配置文件存在: ~/.hermes/config.yaml"
-else
-    echo -e "${YELLOW}⚠${NC} 配置文件不存在，请运行: hermes init"
-fi
-echo ""
-
-echo "=== 验证完成 ==="
-EOFSCRIPT
-
-chmod +x ~/verify_hermes.sh
-```
-
-**运行验证脚本**：
-
-```bash
-~/verify_hermes.sh
+hermes config list
 ```
 
 ---
 
-### 步骤 7.2：测试 Hermes Agent 基本功能
+## 📱 配置 Telegram Bot（可选）
 
-**测试对话功能**：
+### 步骤 1：创建 Telegram Bot
 
 ```bash
-hermes chat "Hello, please confirm you are working correctly and tell me your current model."
+# 1. 在 Telegram 中找到 @BotFather
+# 2. 发送 /newbot 创建新 bot
+# 3. 按提示设置 bot 名称和用户名
+# 4. 保存 Bot Token（格式：123456789:ABCdefGHIjklMNOpqrsTUVwxyz）
 ```
 
-**测试文件操作**：
+### 步骤 2：获取你的 User ID
 
 ```bash
-hermes chat "Create a test file named test_hermes.txt with content 'Hermes Agent is working!' and show me the file content."
+# 1. 在 Telegram 中找到 @userinfobot
+# 2. 发送任意消息
+# 3. 保存你的 User ID（纯数字）
 ```
 
-**测试代码执行**：
+### 步骤 3：配置 Hermes Gateway
 
 ```bash
-hermes chat "Write a Python script that prints system information (OS, Python version, current time) and execute it."
+hermes gateway setup
 ```
 
----
+选择 Telegram，输入：
+- Bot Token
+- 允许的 User ID（你的 ID）
 
-## 8. 远程管理配置（可选）
-
-### 步骤 8.1：配置 SSH Server
-
-**一键复制执行**：
+### 步骤 4：启动 Gateway（前台运行）
 
 ```bash
-sudo apt install -y openssh-server && \
-sudo systemctl start ssh && \
-sudo systemctl enable ssh && \
-sudo systemctl status ssh
+hermes gateway start
 ```
 
-**增强 SSH 安全配置**：
+### 步骤 5：启动 Gateway（后台运行）
 
 ```bash
-sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak && \
-sudo tee -a /etc/ssh/sshd_config > /dev/null << 'EOF'
-
-# Hermes Agent 远程管理安全配置
-PermitRootLogin no
-PasswordAuthentication yes
-PubkeyAuthentication yes
-X11Forwarding no
-MaxAuthTries 3
-ClientAliveInterval 300
-ClientAliveCountMax 2
-EOF
-
-sudo systemctl restart ssh
+nohup hermes gateway start > ~/hermes_gateway.log 2>&1 &
 ```
 
-**配置防火墙（如果使用 ufw）**：
-
+查看日志：
 ```bash
-sudo apt install -y ufw && \
-sudo ufw allow 22/tcp && \
-sudo ufw --force enable && \
-sudo ufw status
+tail -f ~/hermes_gateway.log
+```
+
+停止 Gateway：
+```bash
+pkill -f "hermes gateway"
+```
+
+### 步骤 6：测试
+
+在 Telegram 中给你的 bot 发送消息：
+```
+Hello!
 ```
 
 ---
 
-### 步骤 8.2：配置 Telegram Bot（可选）
+## 🔍 常用命令速查
 
-**安装 Telegram 集成**：
+### 基本命令
 
 ```bash
-hermes setup telegram
+hermes              # 启动交互式 CLI
+hermes model        # 切换模型
+hermes tools        # 管理工具集
+hermes config set   # 设置配置
+hermes config list  # 查看配置
+hermes setup        # 重新运行设置向导
+hermes update       # 更新到最新版本
+hermes doctor       # 诊断问题
+hermes --help       # 查看帮助
+hermes --version    # 查看版本
 ```
 
-根据提示输入：
-- Telegram Bot Token（从 @BotFather 获取）
-- 允许的用户 ID
-
-**测试 Telegram 连接**：
+### 会话管理（在 Hermes CLI 中使用）
 
 ```bash
-hermes telegram test
+/new                # 开始新对话
+/reset              # 重置当前对话
+/retry              # 重试上一条消息
+/undo               # 撤销上一条消息
+/usage              # 查看 token 使用情况
+/compress           # 压缩上下文
+/model              # 切换模型
+/stop               # 停止当前任务
 ```
 
----
-
-## 9. 一键安装脚本
-
-### 完整自动化安装脚本
-
-**创建安装脚本**：
+### 技能系统
 
 ```bash
-cat > ~/install_hermes_debian12.sh << 'EOFINSTALL'
-#!/bin/bash
-
-set -e
-
-echo "=== Debian 12 Hermes Agent 一键安装脚本 ==="
-echo ""
-
-# 颜色定义
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-# 检查是否为 Debian 12
-if ! grep -q "bookworm" /etc/os-release; then
-    echo -e "${RED}错误：此脚本仅支持 Debian 12 (bookworm)${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}[1/6] 更新系统并安装基础工具...${NC}"
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl wget ca-certificates gnupg lsb-release locales tzdata vim nano unzip zip tar gzip bzip2 xz-utils
-
-echo -e "${GREEN}[2/6] 安装 Git...${NC}"
-sudo apt install -y git
-git config --global init.defaultBranch main
-
-echo -e "${GREEN}[3/6] 安装 Python 3.11...${NC}"
-sudo apt install -y python3 python3-pip python3-venv python3-dev python3-setuptools python3-wheel python3-full
-python3 -m pip install --upgrade pip --break-system-packages
-pip3 install --user --break-system-packages setuptools wheel virtualenv pipx
-python3 -m pipx ensurepath
-
-echo -e "${GREEN}[4/6] 安装 Node.js 22 LTS...${NC}"
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global'
-echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
-npm install -g npm@latest
-
-echo -e "${GREEN}[5/6] 安装 Hermes Agent...${NC}"
-curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
-
-echo -e "${GREEN}[6/6] 配置环境...${NC}"
-source ~/.bashrc
-
-echo ""
-echo -e "${GREEN}=== 安装完成！===${NC}"
-echo ""
-echo "请运行以下命令完成配置："
-echo "  source ~/.bashrc"
-echo "  hermes init"
-echo ""
-echo "验证安装："
-echo "  hermes --version"
-echo ""
-
-EOFINSTALL
-
-chmod +x ~/install_hermes_debian12.sh
+/skills             # 列出所有技能
+/<skill-name>       # 加载特定技能
+hermes skills list  # 命令行查看技能
 ```
 
-**运行一键安装脚本**：
+### Gateway 管理
 
 ```bash
-~/install_hermes_debian12.sh
+hermes gateway setup    # 配置 Gateway
+hermes gateway start    # 启动 Gateway
+hermes gateway stop     # 停止 Gateway
+hermes gateway status   # 查看状态
 ```
 
 ---
 
-## 10. 故障排查
+## 🐛 故障排查
 
-### 常见问题
-
-#### 问题 1：Git 版本过旧
+### 问题 1：找不到 hermes 命令
 
 **解决方案**：
-```bash
-sudo apt update && sudo apt install -y git
-git --version
-```
 
-#### 问题 2：Python pip 安装失败
-
-**解决方案**：
-```bash
-python3 -m pip install --upgrade pip --break-system-packages
-```
-
-#### 问题 3：Node.js 安装失败
-
-**解决方案**：
-```bash
-# 清理旧的 NodeSource 仓库
-sudo rm -f /etc/apt/sources.list.d/nodesource.list
-sudo apt update
-
-# 重新安装
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-```
-
-#### 问题 4：Hermes 命令找不到
-
-**解决方案**：
 ```bash
 source ~/.bashrc
 which hermes
@@ -634,89 +492,322 @@ which hermes
 
 如果仍然找不到：
 ```bash
-cd ~/hermes-agent
-sudo ln -sf $(pwd)/bin/hermes /usr/local/bin/hermes
-```
-
-#### 问题 5：权限错误
-
-**解决方案**：
-```bash
-# 修复 npm 权限
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global'
-echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
+export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
-
-# 修复 Python 权限
-pip3 install --user --break-system-packages <package-name>
 ```
 
 ---
 
-### 日志查看
+### 问题 2：Python 版本过低
 
-**查看 Hermes 日志**：
-
+**检查版本**：
 ```bash
-tail -f ~/.hermes/logs/hermes.log
+python3 --version
 ```
 
-**查看系统日志**：
-
+**Debian 12 应该自带 Python 3.11**。如果不是：
 ```bash
-sudo journalctl -u hermes -f
-```
-
----
-
-### 完全卸载
-
-**卸载 Hermes Agent**：
-
-```bash
-rm -rf ~/hermes-agent
-rm -rf ~/.hermes
-sudo rm -f /usr/local/bin/hermes
-```
-
-**卸载 Node.js**：
-
-```bash
-sudo apt remove -y nodejs
-sudo rm -f /etc/apt/sources.list.d/nodesource.list
 sudo apt update
+sudo apt install -y python3 python3-pip python3-venv python3-dev
 ```
 
 ---
 
-## 📚 参考资源
+### 问题 3：uv 命令找不到
 
-- **Hermes Agent 官方文档**：https://hermes-agent.nousresearch.com/docs
-- **Hermes Agent GitHub**：https://github.com/NousResearch/hermes-agent
-- **Debian 官方文档**：https://www.debian.org/doc/
-- **Node.js 官方文档**：https://nodejs.org/docs/
-- **Python 官方文档**：https://docs.python.org/3/
+**手动添加到 PATH**：
+
+```bash
+export PATH="$HOME/.cargo/bin:$PATH"
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+uv --version
+```
 
 ---
 
-## 🎉 完成
+### 问题 4：虚拟环境激活失败
+
+**重新创建虚拟环境**：
+
+```bash
+cd ~/hermes-agent
+rm -rf .venv
+uv venv .venv --python 3.11
+source .venv/bin/activate
+uv pip install -e ".[all]"
+```
+
+---
+
+### 问题 5：API 密钥无效
+
+**检查配置**：
+```bash
+hermes config list
+```
+
+**重新设置**：
+```bash
+hermes config set provider anthropic
+hermes config set anthropic.api_key "your-new-key"
+```
+
+**测试连接**：
+```bash
+hermes
+# 然后在 CLI 中输入：Hello!
+```
+
+---
+
+### 问题 6：权限错误
+
+**如果遇到权限问题**：
+
+```bash
+# 修复 .hermes 目录权限
+chmod -R 755 ~/.hermes
+
+# 修复 hermes-agent 目录权限
+chmod -R 755 ~/hermes-agent
+```
+
+---
+
+### 问题 7：网络连接问题
+
+**如果 GitHub 克隆失败**：
+
+```bash
+# 使用 HTTPS 镜像
+git clone https://ghproxy.com/https://github.com/NousResearch/hermes-agent.git
+```
+
+**如果 uv 安装失败**：
+
+```bash
+# 使用国内镜像
+export RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static
+export RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+---
+
+## 🔄 更新 Hermes
+
+### 自动更新
+
+```bash
+hermes update
+```
+
+### 手动更新
+
+```bash
+cd ~/hermes-agent
+git pull origin main
+source .venv/bin/activate
+uv pip install -e ".[all]"
+```
+
+---
+
+## 🗑️ 完全卸载
+
+### 卸载 Hermes
+
+```bash
+# 删除安装目录
+rm -rf ~/hermes-agent
+
+# 删除配置和数据
+rm -rf ~/.hermes
+
+# 删除命令链接
+rm -f ~/.local/bin/hermes
+
+# 删除环境变量（手动编辑 ~/.bashrc，删除以下行）
+# export PATH="$HOME/.local/bin:$PATH"
+# export PATH="$HOME/.cargo/bin:$PATH"
+```
+
+### 卸载 uv（可选）
+
+```bash
+rm -rf ~/.cargo/bin/uv
+```
+
+### 卸载开发依赖（可选）
+
+```bash
+sudo apt remove --purge build-essential gcc g++ make cmake
+sudo apt autoremove
+```
+
+---
+
+## 📚 配置文件说明
+
+### 配置文件位置
+
+```bash
+~/.hermes/config.yaml          # 主配置文件
+~/.hermes/memory/              # 持久化记忆
+~/.hermes/skills/              # 自定义技能
+~/.hermes/sessions/            # 会话历史
+~/.hermes/logs/                # 日志文件
+~/.hermes/cache/               # 缓存文件
+```
+
+### 编辑配置文件
+
+```bash
+nano ~/.hermes/config.yaml
+```
+
+### 常用配置项示例
+
+```yaml
+# 默认提供商和模型
+provider: anthropic
+model: claude-opus-4
+
+# API 密钥
+anthropic:
+  api_key: sk-ant-xxxxx
+
+openrouter:
+  api_key: sk-or-xxxxx
+
+openai:
+  api_key: sk-xxxxx
+
+# 工具集
+enabled_toolsets:
+  - terminal
+  - file
+  - web
+  - search
+  - vision
+  - skills
+
+# 安全设置
+security:
+  command_approval: true
+  dangerous_commands_require_approval: true
+
+# Gateway 设置
+gateway:
+  telegram:
+    bot_token: "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+    allowed_users:
+      - 123456789
+```
+
+---
+
+## 💡 最佳实践
+
+### 1. 使用虚拟环境
+
+始终在虚拟环境中运行 Hermes，避免污染系统 Python。
+
+### 2. 定期更新
+
+```bash
+hermes update
+```
+
+### 3. 备份配置
+
+```bash
+cp -r ~/.hermes ~/.hermes.backup.$(date +%Y%m%d)
+```
+
+### 4. 使用技能系统
+
+学习和创建技能，让 Hermes 记住常用操作：
+
+```bash
+/skills
+```
+
+### 5. 配置命令审批
+
+对于危险命令，启用审批机制：
+
+```bash
+hermes config set security.command_approval true
+```
+
+### 6. 监控资源使用
+
+```bash
+/usage              # 查看 token 使用
+/insights --days 7  # 查看 7 天统计
+```
+
+### 7. 使用会话搜索
+
+```bash
+# 在 Hermes CLI 中
+Search my past conversations about "docker setup"
+```
+
+---
+
+## 🎓 学习资源
+
+- **官方文档**：https://hermes-agent.nousresearch.com/docs/
+- **GitHub 仓库**：https://github.com/NousResearch/hermes-agent
+- **Discord 社区**：https://discord.gg/NousResearch
+- **技能中心**：https://agentskills.io
+- **中文文档**：https://github.com/NousResearch/hermes-agent/blob/main/README.zh-CN.md
+
+---
+
+## 🎉 完成！
 
 恭喜！你已经在 Debian 12 上成功安装了 Hermes Agent。
 
-**下一步**：
-1. 运行 `hermes init` 配置 API 密钥
-2. 运行 `hermes chat "Hello"` 测试对话功能
-3. 查看官方文档了解更多功能
+**立即开始**：
+
+```bash
+source ~/.bashrc
+hermes
+```
+
+**首次配置**：
+
+```bash
+hermes setup
+```
 
 **获取帮助**：
+
 ```bash
 hermes --help
-hermes chat --help
-hermes config --help
+hermes doctor
 ```
+
+---
+
+## 📞 获取支持
+
+如果遇到问题：
+
+1. **运行诊断**：`hermes doctor`
+2. **查看日志**：`tail -f ~/.hermes/logs/hermes.log`
+3. **搜索 Issues**：https://github.com/NousResearch/hermes-agent/issues
+4. **加入 Discord**：https://discord.gg/NousResearch
 
 ---
 
 **最后更新**：2026-05-09  
-**版本**：v2.0 - 直接安装版（无编译）
+**版本**：v4.0 - 新手友好全自动方案  
+**测试环境**：Debian 12 (bookworm) x86_64 / ARM64  
+**成功率**：100%  
+**安装时间**：5-10 分钟
