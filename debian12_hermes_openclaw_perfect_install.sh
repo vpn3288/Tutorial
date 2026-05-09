@@ -336,56 +336,94 @@ install_rust_and_uv() {
     else
         log_info "安装 uv 包管理器..."
         
-        # 方法1: 使用官方安装脚本（推荐）
-        if curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1; then
-            # 加载 uv
+        # 确保 Rust 环境已加载
+        if [ -f /root/.cargo/env ]; then
+            source /root/.cargo/env
+        fi
+        export PATH="/root/.cargo/bin:$PATH"
+        
+        # 方法1: 使用官方安装脚本（推荐，最快）
+        log_info "方法1: 使用官方安装脚本..."
+        if curl -LsSf https://astral.sh/uv/install.sh | sh 2>&1 | tee /tmp/uv_install.log | grep -q "uv"; then
+            # 强制重新加载环境变量
+            source /root/.cargo/env 2>/dev/null || true
             export PATH="/root/.cargo/bin:$PATH"
+            
+            # 等待文件系统同步
+            sleep 1
+            
+            # 多次尝试检测 uv
+            for i in {1..3}; do
+                if [ -f /root/.cargo/bin/uv ]; then
+                    chmod +x /root/.cargo/bin/uv
+                    export PATH="/root/.cargo/bin:$PATH"
+                    
+                    if /root/.cargo/bin/uv --version &>/dev/null; then
+                        UV_VERSION=$(/root/.cargo/bin/uv --version | awk '{print $2}')
+                        log_success "uv 版本: $UV_VERSION (官方安装脚本)"
+                        
+                        # 创建符号链接确保全局可用
+                        ln -sf /root/.cargo/bin/uv /usr/local/bin/uv 2>/dev/null || true
+                        
+                        return 0
+                    fi
+                fi
+                sleep 1
+            done
+            
+            log_warning "官方脚本执行成功，但 uv 命令未立即生效"
+        else
+            log_warning "官方安装脚本执行失败"
+        fi
+        
+        # 方法2: 使用 pip 安装 uv（快速备用方案）
+        log_info "方法2: 使用 pip 安装 uv..."
+        if python3 -m pip install uv --quiet 2>&1 | tail -1; then
+            # 等待安装完成
+            sleep 1
             
             if command -v uv &>/dev/null; then
                 UV_VERSION=$(uv --version | awk '{print $2}')
-                log_success "uv 版本: $UV_VERSION"
-            else
-                log_warning "uv 安装脚本执行成功，但命令未找到，尝试备用方法..."
-                
-                # 方法2: 使用 cargo 安装（备用）
-                if command -v cargo &>/dev/null; then
-                    log_info "使用 cargo 安装 uv..."
-                    cargo install uv --quiet 2>&1 | tail -1 || true
-                    export PATH="/root/.cargo/bin:$PATH"
-                    
-                    if command -v uv &>/dev/null; then
-                        UV_VERSION=$(uv --version | awk '{print $2}')
-                        log_success "uv 版本: $UV_VERSION (通过 cargo 安装)"
-                    else
-                        log_warning "uv 安装失败，将使用 pip 作为备用方案"
-                        log_info "Hermes 仍可正常工作，只是包管理速度会稍慢"
-                    fi
-                else
-                    log_warning "uv 安装失败，将使用 pip 作为备用方案"
-                    log_info "Hermes 仍可正常工作，只是包管理速度会稍慢"
-                fi
-            fi
-        else
-            log_warning "uv 安装脚本下载失败，尝试备用方法..."
-            
-            # 方法2: 使用 cargo 安装（备用）
-            if command -v cargo &>/dev/null; then
-                log_info "使用 cargo 安装 uv..."
-                cargo install uv --quiet 2>&1 | tail -1 || true
-                export PATH="/root/.cargo/bin:$PATH"
-                
-                if command -v uv &>/dev/null; then
-                    UV_VERSION=$(uv --version | awk '{print $2}')
-                    log_success "uv 版本: $UV_VERSION (通过 cargo 安装)"
-                else
-                    log_warning "uv 安装失败，将使用 pip 作为备用方案"
-                    log_info "Hermes 仍可正常工作，只是包管理速度会稍慢"
-                fi
-            else
-                log_warning "uv 安装失败，将使用 pip 作为备用方案"
-                log_info "Hermes 仍可正常工作，只是包管理速度会稍慢"
+                log_success "uv 版本: $UV_VERSION (通过 pip 安装)"
+                return 0
             fi
         fi
+        
+        log_warning "pip 安装 uv 失败，尝试最后方案..."
+        
+        # 方法3: 使用 cargo 编译安装（最可靠但最慢）
+        if command -v cargo &>/dev/null; then
+            log_info "方法3: 使用 cargo 编译安装 uv（需要 2-5 分钟）..."
+            log_info "正在编译，请耐心等待..."
+            
+            if cargo install uv 2>&1 | tee /tmp/cargo_uv_install.log | grep -E "Installing|Compiling|Finished"; then
+                # 强制重新加载环境
+                source /root/.cargo/env 2>/dev/null || true
+                export PATH="/root/.cargo/bin:$PATH"
+                
+                # 等待编译完成
+                sleep 2
+                
+                if [ -f /root/.cargo/bin/uv ]; then
+                    chmod +x /root/.cargo/bin/uv
+                    
+                    if /root/.cargo/bin/uv --version &>/dev/null; then
+                        UV_VERSION=$(/root/.cargo/bin/uv --version | awk '{print $2}')
+                        log_success "uv 版本: $UV_VERSION (通过 cargo 编译)"
+                        
+                        # 创建符号链接
+                        ln -sf /root/.cargo/bin/uv /usr/local/bin/uv 2>/dev/null || true
+                        
+                        return 0
+                    fi
+                fi
+            fi
+        fi
+        
+        # 所有方法都失败
+        log_warning "uv 安装失败，将使用 pip 作为 Hermes 的包管理器"
+        log_info "这不影响 Hermes 功能，只是包管理速度会稍慢"
+        log_info "安装 Hermes 时请使用: python3 -m pip install -e \".[all]\""
     fi
 }
 
