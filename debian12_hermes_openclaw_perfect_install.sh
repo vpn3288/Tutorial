@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # Debian 12 完美安装脚本 - Hermes Agent & OpenClaw 双兼容版
-# 版本: v5.0 - ROOT 环境优化 + 全自动 + 新手友好
+# 版本: v6.0 - 环境变量立即生效 + 四重保障 uv 安装
 # 适用: 最干净的 Debian 12 (远程 DD 安装)
 # 特性: 100% 自动化，静默安装，自动跳过已安装项，最新稳定版
 ################################################################################
@@ -329,12 +329,12 @@ install_rust_and_uv() {
     # 加载 Rust 环境
     export PATH="/root/.cargo/bin:$PATH"
     
-    # 安装 uv (Hermes 推荐的 Python 包管理器)
+    # 安装 uv (Hermes 推荐的 Python 包管理器) - 四重保障机制
     if command -v uv &>/dev/null; then
         UV_VERSION=$(uv --version | awk '{print $2}')
         log_success "uv $UV_VERSION 已安装"
     else
-        log_info "安装 uv 包管理器..."
+        log_info "安装 uv 包管理器（四重保障机制）..."
         
         # 确保 Rust 环境已加载
         if [ -f /root/.cargo/env ]; then
@@ -345,9 +345,10 @@ install_rust_and_uv() {
         # 方法1: 使用官方安装脚本（推荐，最快）
         log_info "方法1: 使用官方安装脚本..."
         if curl -LsSf https://astral.sh/uv/install.sh | sh 2>&1 | tee /tmp/uv_install.log | grep -q "uv"; then
-            # 强制重新加载环境变量
+            # 强制重新加载环境变量（多次确保生效）
             source /root/.cargo/env 2>/dev/null || true
             export PATH="/root/.cargo/bin:$PATH"
+            source ~/.bashrc 2>/dev/null || true
             
             # 等待文件系统同步
             sleep 1
@@ -371,57 +372,97 @@ install_rust_and_uv() {
                 sleep 1
             done
             
-            log_warning "官方脚本执行成功，但 uv 命令未立即生效"
+            log_warning "官方脚本执行成功，但 uv 命令未立即生效，尝试备用方案..."
         else
-            log_warning "官方安装脚本执行失败"
+            log_warning "官方安装脚本执行失败，尝试备用方案..."
         fi
         
-        # 方法2: 使用 pip 安装 uv（快速备用方案）
-        log_info "方法2: 使用 pip 安装 uv..."
+        # 方法2: 使用 pip 安装 uv（快速备用方案，预编译二进制）
+        log_info "方法2: 使用 pip 安装 uv（预编译二进制，10-30秒）..."
         if python3 -m pip install uv --quiet 2>&1 | tail -1; then
+            # 强制重新加载环境变量
+            source /root/.cargo/env 2>/dev/null || true
+            export PATH="/root/.cargo/bin:$PATH"
+            source ~/.bashrc 2>/dev/null || true
+            
             # 等待安装完成
             sleep 1
             
-            if command -v uv &>/dev/null; then
-                UV_VERSION=$(uv --version | awk '{print $2}')
-                log_success "uv 版本: $UV_VERSION (通过 pip 安装)"
-                return 0
-            fi
+            # 多次尝试检测
+            for i in {1..3}; do
+                if command -v uv &>/dev/null; then
+                    UV_VERSION=$(uv --version | awk '{print $2}')
+                    log_success "uv 版本: $UV_VERSION (通过 pip 安装)"
+                    
+                    # 创建符号链接
+                    ln -sf $(which uv) /usr/local/bin/uv 2>/dev/null || true
+                    
+                    return 0
+                fi
+                sleep 1
+            done
         fi
         
-        log_warning "pip 安装 uv 失败，尝试最后方案..."
+        log_warning "pip 安装 uv 失败，尝试 cargo 编译方案..."
         
-        # 方法3: 使用 cargo 编译安装（最可靠但最慢）
+        # 方法3: 使用 cargo 编译安装（最可靠但最慢，2-5分钟）
         if command -v cargo &>/dev/null; then
             log_info "方法3: 使用 cargo 编译安装 uv（需要 2-5 分钟）..."
-            log_info "正在编译，请耐心等待..."
+            log_info "正在从源码编译，请耐心等待..."
             
             if cargo install uv 2>&1 | tee /tmp/cargo_uv_install.log | grep -E "Installing|Compiling|Finished"; then
-                # 强制重新加载环境
+                # 强制重新加载环境（多次确保生效）
                 source /root/.cargo/env 2>/dev/null || true
                 export PATH="/root/.cargo/bin:$PATH"
+                source ~/.bashrc 2>/dev/null || true
                 
                 # 等待编译完成
                 sleep 2
                 
-                if [ -f /root/.cargo/bin/uv ]; then
-                    chmod +x /root/.cargo/bin/uv
-                    
-                    if /root/.cargo/bin/uv --version &>/dev/null; then
-                        UV_VERSION=$(/root/.cargo/bin/uv --version | awk '{print $2}')
-                        log_success "uv 版本: $UV_VERSION (通过 cargo 编译)"
+                # 多次尝试检测
+                for i in {1..3}; do
+                    if [ -f /root/.cargo/bin/uv ]; then
+                        chmod +x /root/.cargo/bin/uv
+                        export PATH="/root/.cargo/bin:$PATH"
                         
-                        # 创建符号链接
-                        ln -sf /root/.cargo/bin/uv /usr/local/bin/uv 2>/dev/null || true
-                        
-                        return 0
+                        if /root/.cargo/bin/uv --version &>/dev/null; then
+                            UV_VERSION=$(/root/.cargo/bin/uv --version | awk '{print $2}')
+                            log_success "uv 版本: $UV_VERSION (通过 cargo 编译)"
+                            
+                            # 创建符号链接
+                            ln -sf /root/.cargo/bin/uv /usr/local/bin/uv 2>/dev/null || true
+                            
+                            return 0
+                        fi
                     fi
-                fi
+                    sleep 1
+                done
+            fi
+        fi
+        
+        # 方法4: pip 降级方案（保底）
+        log_info "方法4: 尝试 pip 降级安装 uv（保底方案）..."
+        if python3 -m pip install --upgrade --force-reinstall uv 2>&1 | tail -5; then
+            # 强制重新加载环境变量
+            source /root/.cargo/env 2>/dev/null || true
+            export PATH="/root/.cargo/bin:$PATH"
+            source ~/.bashrc 2>/dev/null || true
+            
+            sleep 2
+            
+            if command -v uv &>/dev/null; then
+                UV_VERSION=$(uv --version | awk '{print $2}')
+                log_success "uv 版本: $UV_VERSION (通过 pip 强制重装)"
+                
+                # 创建符号链接
+                ln -sf $(which uv) /usr/local/bin/uv 2>/dev/null || true
+                
+                return 0
             fi
         fi
         
         # 所有方法都失败
-        log_warning "uv 安装失败，将使用 pip 作为 Hermes 的包管理器"
+        log_warning "uv 安装失败（四种方法均失败），将使用 pip 作为 Hermes 的包管理器"
         log_info "这不影响 Hermes 功能，只是包管理速度会稍慢"
         log_info "安装 Hermes 时请使用: python3 -m pip install -e \".[all]\""
     fi
@@ -661,13 +702,15 @@ main() {
     cat << "EOF"
 ╔═══════════════════════════════════════════════════════════════════╗
 ║                                                                   ║
-║   Debian 12 完美安装脚本 v5.0                                     ║
+║   Debian 12 完美安装脚本 v6.0                                     ║
 ║   Hermes Agent & OpenClaw 双兼容版                               ║
 ║                                                                   ║
 ║   • 100% 自动化安装                                               ║
 ║   • ROOT 环境优化                                                 ║
 ║   • 最新稳定版                                                    ║
 ║   • 自动跳过已安装项                                              ║
+║   • 环境变量立即生效                                              ║
+║   • 四重保障 uv 安装                                              ║
 ║                                                                   ║
 ╚═══════════════════════════════════════════════════════════════════╝
 EOF
