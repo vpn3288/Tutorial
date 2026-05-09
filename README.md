@@ -15,6 +15,7 @@
 - ✅ 远程 DD 安装的干净系统
 - ✅ ROOT 环境
 - ✅ x86_64 / ARM64 架构
+- ✅ **即使连 curl/wget 都没有也能安装**
 
 **特点**：
 - 🎯 100% 自动化，无需手动干预
@@ -22,39 +23,65 @@
 - 🎯 最新稳定版/长期服务版
 - 🎯 完整依赖，一次性安装所有必要软件
 - 🎯 新手友好，彩色输出和进度提示
+- 🎯 **适配极度精简的系统环境**
 
 ---
 
 ## 📦 一键安装命令
 
-### 方式一：超级精简版（推荐，适用于连 curl 都没有的系统）
+### 方式一：极度精简版（推荐，适用于连 curl/wget 都没有的系统）
+
+**如果你的系统连 `curl` 和 `wget` 都没有，先执行这个：**
+
+```bash
+apt-get update && apt-get install -y curl wget ca-certificates && curl -fsSL https://raw.githubusercontent.com/vpn3288/Tutorial/main/debian12_hermes_openclaw_perfect_install.sh | bash
+```
+
+这个命令会：
+1. 更新软件源
+2. 安装 curl、wget、ca-certificates（HTTPS 必需）
+3. 自动下载并运行主安装脚本
+
+---
+
+### 方式二：超级精简版（如果有 wget 但没有 curl）
 
 ```bash
 wget -qO- https://raw.githubusercontent.com/vpn3288/Tutorial/main/bootstrap.sh | bash
 ```
 
-### 方式二：标准版（如果已有 curl）
+---
+
+### 方式三：标准版（如果已有 curl）
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/vpn3288/Tutorial/main/debian12_hermes_openclaw_perfect_install.sh | bash
 ```
 
-### 方式三：完全手动（最保险）
+---
+
+### 方式四：分步安装（最保险，适合网络不稳定的情况）
 
 ```bash
-# 1. 安装 curl（如果没有）
-apt-get update && apt-get install -y curl
+# 1. 安装基础工具
+apt-get update && apt-get install -y curl wget ca-certificates
 
-# 2. 下载并运行主脚本
-curl -fsSL https://raw.githubusercontent.com/vpn3288/Tutorial/main/debian12_hermes_openclaw_perfect_install.sh | bash
+# 2. 下载主脚本
+curl -fsSL https://raw.githubusercontent.com/vpn3288/Tutorial/main/debian12_hermes_openclaw_perfect_install.sh -o install.sh
 
-# 3. 重新加载环境
+# 3. 赋予执行权限
+chmod +x install.sh
+
+# 4. 运行脚本
+bash install.sh
+
+# 5. 重新加载环境
 source ~/.bashrc
 
-# 4. 安装 Hermes Agent
+# 6. 安装 Hermes Agent
 cd ~ && git clone https://github.com/NousResearch/hermes-agent.git && cd hermes-agent && uv venv .venv --python 3.11 && source .venv/bin/activate && uv pip install -e ".[all]" && ln -sf ~/hermes-agent/hermes ~/.local/bin/hermes
 
-# 5. 安装 OpenClaw
+# 7. 安装 OpenClaw
 npm install -g openclaw@latest
 ```
 
@@ -184,6 +211,32 @@ hermes config list
 ---
 
 ## 🐛 故障排查
+
+### 问题 0：系统没有 curl 和 wget
+
+**症状**：
+```bash
+-bash: curl: command not found
+-bash: wget: command not found
+```
+
+**解决方案**：
+
+```bash
+# 先安装基础工具
+apt-get update && apt-get install -y curl wget ca-certificates
+
+# 然后运行主脚本
+curl -fsSL https://raw.githubusercontent.com/vpn3288/Tutorial/main/debian12_hermes_openclaw_perfect_install.sh | bash
+```
+
+**或者使用一键命令**：
+
+```bash
+apt-get update && apt-get install -y curl wget ca-certificates && curl -fsSL https://raw.githubusercontent.com/vpn3288/Tutorial/main/debian12_hermes_openclaw_perfect_install.sh | bash
+```
+
+---
 
 ### 问题 1：找不到命令
 
