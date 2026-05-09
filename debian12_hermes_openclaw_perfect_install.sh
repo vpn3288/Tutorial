@@ -45,9 +45,18 @@ log_section() {
 detect_system() {
     log_section "系统信息检测"
     
-    OS_NAME=$(lsb_release -is 2>/dev/null || echo "Unknown")
-    OS_VERSION=$(lsb_release -rs 2>/dev/null || echo "Unknown")
-    OS_CODENAME=$(lsb_release -cs 2>/dev/null || echo "Unknown")
+    # 尝试从多个来源检测系统信息
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_NAME="${NAME:-Unknown}"
+        OS_VERSION="${VERSION_ID:-Unknown}"
+        OS_CODENAME="${VERSION_CODENAME:-Unknown}"
+    else
+        OS_NAME=$(lsb_release -is 2>/dev/null || echo "Unknown")
+        OS_VERSION=$(lsb_release -rs 2>/dev/null || echo "Unknown")
+        OS_CODENAME=$(lsb_release -cs 2>/dev/null || echo "Unknown")
+    fi
+    
     ARCH=$(uname -m)
     
     log_info "操作系统: $OS_NAME $OS_VERSION ($OS_CODENAME)"
@@ -55,14 +64,17 @@ detect_system() {
     log_info "内核: $(uname -r)"
     log_info "用户: $(whoami)"
     
-    # 验证 Debian 12
-    if [[ "$OS_NAME" != "Debian" ]] || [[ "$OS_VERSION" != "12" ]]; then
+    # 验证 Debian 12（宽松检查）
+    if [[ "$OS_NAME" == *"Debian"* ]] && [[ "$OS_VERSION" == "12"* ]]; then
+        log_success "检测到 Debian 12 系统"
+    elif [[ "$OS_NAME" == "Unknown" ]]; then
+        log_warning "无法检测系统版本，假设为 Debian 12 继续安装"
+        log_info "如果不是 Debian 12，请按 Ctrl+C 取消"
+        sleep 3
+    else
         log_warning "本脚本专为 Debian 12 优化，当前系统: $OS_NAME $OS_VERSION"
-        read -p "是否继续？(y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
+        log_info "继续安装可能会遇到兼容性问题"
+        sleep 3
     fi
     
     log_success "系统检测完成"
